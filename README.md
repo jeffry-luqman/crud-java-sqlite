@@ -21,5 +21,8 @@ Ini adalah contoh aplikasi Create, Read, Update dan Delete (CRUD) menu restoran 
 	java -cp .:sqlite-jdbc-3.40.0.0.jar CRUD
 	```
 
+## Video Penggunaan
+https://user-images.githubusercontent.com/11884257/215275944-761b3208-b2e5-4b49-9b5e-da344be11d40.mp4
+
 ## Catatan
 Aplikasi ini menggunakan [Driver SQLite JDBC](https://github.com/xerial/sqlite-jdbc), seharusnya driver tersebut diunduh langsung dari sana, namun untuk memudahkan proses belajar terutama bagi pemula driver tersebut juga disertakan pada repositori ini.

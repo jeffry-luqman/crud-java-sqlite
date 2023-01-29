@@ -1,8 +1,14 @@
-import java.sql.*;
+import java.lang.Exception;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.Locale;
 import java.util.Scanner;
-import java.util.ArrayList;
 
 public class CRUD {
 
@@ -17,7 +23,7 @@ public class CRUD {
 		buatTabel();
 		System.out.println("-----------------------------------------");
 
-		Integer pilihan;
+		Integer pilihan = 0;
 		while (true) {
 			System.out.println("Aplikasi CRUD Menu Restoran");
 			System.out.println("1. Lihat Daftar Menu");
@@ -25,7 +31,16 @@ public class CRUD {
 			System.out.println("3. Ubah Menu");
 			System.out.println("4. Hapus Menu");
 			System.out.println("5. Keluar");
-			System.out.print("Silakan pilih operasi (1-5) : "); pilihan = scannerInt.nextInt();
+			System.out.print("Silakan pilih operasi (1-5) : ");
+			try {
+				pilihan = scannerInt.nextInt();
+			} catch (Exception e) {
+				scannerInt.nextLine();
+				System.out.println("");
+				System.out.println("Silakan pilih operasi berupa angka dari 1 sampai 5!");
+				System.out.println("-----------------------------------------");
+				continue;
+			}
 			System.out.println("-----------------------------------------");
 			switch (pilihan) {
 			case 1:
@@ -56,8 +71,9 @@ public class CRUD {
 		try {
 			koneksi = DriverManager.getConnection("jdbc:sqlite:crud.db");
 			System.out.println("Berhasil terhubung ke database crud.db...");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.out.println("Gagal terhubung ke database crud.db : " + e.getMessage());
+			System.exit(1);
 		}
 	}
 
@@ -69,13 +85,15 @@ public class CRUD {
 			+ "  nama TEXT,"
 			+ "  harga INTEGER,"
 			+ "  PRIMARY KEY (id AUTOINCREMENT)"
+			+ "  UNIQUE (nomor)"
 			+ ");";
 		try {
 			Statement stmt = koneksi.createStatement();
 			stmt.execute(sql);
 			System.out.println("Tabel menu_restoran berhasil dibuat...");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.out.println("Gagal membuat tabel menu_restoran : " + e.getMessage());
+			System.exit(1);
 		}
 	}
 
@@ -94,52 +112,85 @@ public class CRUD {
 				daftarMenu.add(m);
 			}
 			cetakDaftarMenu(daftarMenu);
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.out.println("");
+			System.out.println("Gagal membuat tabel menu_restoran : " + e.getMessage());
 		}
 	}
 
 	public static void tambahMenu() {
 		System.out.println("2. Buat Menu Baru");
 
-		Integer nomor, harga;
+		Integer nomor = 0;
+		Integer harga;
 		String nama;
-		System.out.print("Masukan Nomor Menu : "); nomor = scannerInt.nextInt();
-		System.out.print("Masukan Nama Menu  : "); nama = scannerStr.nextLine();
-		System.out.print("Masukan Harga Menu : "); harga = scannerInt.nextInt();
 		String sql = "INSERT INTO menu_restoran (nomor, nama, harga) VALUES (?,?,?)";
 		try {
+			System.out.print("Masukan Nomor Menu : "); nomor = scannerInt.nextInt();
+			System.out.print("Masukan Nama Menu  : "); nama = scannerStr.nextLine();
+			System.out.print("Masukan Harga Menu : "); harga = scannerInt.nextInt();
+
 			PreparedStatement ps = koneksi.prepareStatement(sql);
 			ps.setInt(1, nomor);
 			ps.setString(2, nama);
 			ps.setInt(3, harga);
 			ps.executeUpdate();
+			System.out.println("");
 			System.out.println("Menu " + nama + " berhasil ditambahkan!");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		} catch (InputMismatchException e) {
+			scannerInt.nextLine();
+			System.out.println("");
+			System.out.println("Angka tidak valid!");
+		} catch (Exception e) {
+			System.out.println("");
+			if (e.getMessage().contains("UNIQUE constraint failed: menu_restoran.nomor")) {
+				System.out.println("Menu dengan nomor " + nomor + " sudah ada!");
+			} else {
+				System.out.println(e.getMessage());
+			}
 		}
 	}
 
 	public static void ubahMenu() {
 		System.out.println("3. Ubah Menu");
 
-		Integer nomor, nomorBaru, harga;
+		Integer nomor = 0;
+		Integer nomorBaru, harga;
 		String nama;
-		System.out.print("Masukan Nomor Menu Yang Akan Diubah : "); nomor = scannerInt.nextInt();
-		System.out.print("Masukan Nomor Menu : "); nomorBaru = scannerInt.nextInt();
-		System.out.print("Masukan Nama Menu  : "); nama = scannerStr.nextLine();
-		System.out.print("Masukan Harga Menu : "); harga = scannerInt.nextInt();
-		String sql = "UPDATE menu_restoran SET nomor = ?, nama = ?, harga = ? WHERE nomor = ?";
+		String sql = "UPDATE menu_restoran SET nomor = ?, nama = ?, harga = ? WHERE id = ?";
 		try {
+			System.out.print("Masukan Nomor Menu Yang Akan Diubah : "); nomor = scannerInt.nextInt();
+
+			MenuResto m = getMenuByNomor(nomor);
+			if (m.id == 0) {
+				System.out.println("");
+				System.out.println("Menu dengan nomor " + nomor + " tidak ditemukan!");
+				return;
+			}
+
+			System.out.print("Masukan Nomor Menu : "); nomorBaru = scannerInt.nextInt();
+			System.out.print("Masukan Nama Menu  : "); nama = scannerStr.nextLine();
+			System.out.print("Masukan Harga Menu : "); harga = scannerInt.nextInt();
+
 			PreparedStatement ps = koneksi.prepareStatement(sql);
 			ps.setInt(1, nomorBaru);
 			ps.setString(2, nama);
 			ps.setInt(3, harga);
-			ps.setInt(4, nomor);
+			ps.setInt(4, m.id);
 			ps.executeUpdate();
+			System.out.println("");
 			System.out.println("Menu dengan nomor " + nomor + " berhasil diubah!");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		} catch (InputMismatchException e) {
+			scannerInt.nextLine();
+			System.out.println("");
+			System.out.println("Angka tidak valid!");
+		} catch (Exception e) {
+			System.out.println("");
+			if (e.getMessage().contains("UNIQUE constraint failed: menu_restoran.nomor")) {
+				System.out.println("Menu dengan nomor " + nomor + " sudah ada!");
+			} else {
+				System.out.println(e.getMessage());
+			}
 		}
 	}
 
@@ -147,16 +198,49 @@ public class CRUD {
 		System.out.println("4. Hapus Menu");
 
 		Integer nomor;
-		System.out.print("Masukan Nomor Menu Yang Akan Dihapus : "); nomor = scannerInt.nextInt();
-		String sql = "DELETE FROM menu_restoran WHERE nomor = ?";
+		String sql = "DELETE FROM menu_restoran WHERE id = ?";
+		try {
+			System.out.print("Masukan Nomor Menu Yang Akan Dihapus : "); nomor = scannerInt.nextInt();
+
+			MenuResto m = getMenuByNomor(nomor);
+			if (m.id == 0) {
+				System.out.println("");
+				System.out.println("Menu dengan nomor " + nomor + " tidak ditemukan!");
+				return;
+			}
+
+			PreparedStatement ps = koneksi.prepareStatement(sql);
+			ps.setInt(1, m.id);
+			ps.executeUpdate();
+			System.out.println("");
+			System.out.println("Menu dengan nomor " + nomor + " berhasil dihapus!");
+		} catch (InputMismatchException e) {
+			scannerInt.nextLine();
+			System.out.println("");
+			System.out.println("Angka tidak valid!");
+		} catch (Exception e) {
+			System.out.println("");
+			System.out.println(e.getMessage());
+		}
+	}
+
+	public static MenuResto getMenuByNomor(Integer nomor) {
+		MenuResto m = new MenuResto();
+		m.id = 0;
+		String sql = "SELECT id, nomor, nama, harga FROM menu_restoran WHERE nomor = ? LIMIT 1";
 		try {
 			PreparedStatement ps = koneksi.prepareStatement(sql);
 			ps.setInt(1, nomor);
-			ps.executeUpdate();
-			System.out.println("Menu dengan nomor " + nomor + " berhasil dihapus!");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-		}
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				m.id = rs.getInt("id");
+				m.nomor = rs.getInt("nomor");
+				m.nama = rs.getString("nama");
+				m.harga = rs.getInt("harga");
+			}
+		} catch (Exception e) {}
+
+		return m;
 	}
 
 	public static String cetakDaftarMenu(ArrayList<MenuResto> daftarMenu) {
@@ -228,6 +312,6 @@ public class CRUD {
 }
 
 class MenuResto {
-	public Integer nomor, harga;
+	public Integer id, nomor, harga;
 	public String nama;
 }
